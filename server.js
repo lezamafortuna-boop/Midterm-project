@@ -59,12 +59,24 @@ function ensureAuthenticated(req, res, next){
   res.status(401).json({ error: 'Not authenticated' });
 }
 
+function ensureAdmin(req, res, next){
+  if(req.isAuthenticated() && req.user.username === 'lezama24') {
+    return next();
+  }
+  res.status(403).json({ error: 'Admin access required' });
+}
+
 app.use('/auth', authRouter);
 
-// redirect root to login if not authenticated, else show notes app
+// redirect root to login if not authenticated, else show notes app or admin panel
 app.get('/', (req, res) => {
   if(req.isAuthenticated()) {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    // Redirect admin to admin panel
+    if(req.user.username === 'lezama24') {
+      res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+    } else {
+      res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
   } else {
     res.redirect('/auth/login');
   }
@@ -134,6 +146,84 @@ app.delete('/api/notes/:id', ensureAuthenticated, async (req, res) => {
   } catch (err) {
     console.error('DELETE /api/notes error:', err.message);
     res.status(400).json({ error: err.message });
+  }
+});
+
+// ========== ADMIN ENDPOINTS ==========
+
+// Get all users (admin only)
+app.get('/api/admin/users', ensureAdmin, async (req, res) => {
+  try {
+    const users = await User.find({}, 'username _id').sort({ _id: 1 });
+    res.json(users);
+  } catch (err) {
+    console.error('GET /api/admin/users error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Update user password (admin only)
+app.put('/api/admin/users/:id', ensureAdmin, async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const userId = req.params.id;
+
+    // Prevent deleting admin account
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (user.username === 'lezama24') {
+      return res.status(403).json({ error: 'Cannot modify admin account' });
+    }
+
+    // Update username if provided and unique
+    if (username && username !== user.username) {
+      const existing = await User.findOne({ username });
+      if (existing) {
+        return res.status(400).json({ error: 'Username already taken' });
+      }
+      user.username = username;
+    }
+
+    // Update password if provided
+    if (password) {
+      user.passwordHash = await bcrypt.hash(password, 10);
+    }
+
+    await user.save();
+    console.log(`✓ User updated: ${user.username}`);
+    res.json({ success: true, user: { _id: user._id, username: user.username } });
+  } catch (err) {
+    console.error('PUT /api/admin/users error:', err.message);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
+});
+
+// Delete user (admin only)
+app.delete('/api/admin/users/:id', ensureAdmin, async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent deleting admin account
+    if (user.username === 'lezama24') {
+      return res.status(403).json({ error: 'Cannot delete admin account' });
+    }
+
+    // Delete user and all their notes
+    await User.findByIdAndDelete(userId);
+    await Note.deleteMany({ userId: userId.toString() });
+
+    console.log(`✓ User deleted: ${user.username}`);
+    res.json({ success: true, message: `User ${user.username} deleted` });
+  } catch (err) {
+    console.error('DELETE /api/admin/users error:', err.message);
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel - Quick Notes</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <script src="/js/admin.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Admin Panel — User Management</h1>
+    <div class="header-actions">
+      <button id="refreshBtn" class="add-note-btn">Refresh Users</button>
+      <a href="/" class="add-note-btn">Go to Notes App</a>
+      <a href="/auth/logout" class="logout-btn">Logout</a>
+    </div>
+  </header>
+
+  <main class="admin-container">
+    <div id="message" role="status" class="message-box"></div>
+
+    <div class="users-section">
+      <h2>Registered Users</h2>
+      <div id="usersList" class="users-table-wrapper">
+        <table class="users-table">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr>
+              <td colspan="2" style="text-align: center; padding: 2rem;">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- Edit User Modal -->
+  <dialog id="editDialog">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 class="dialog-title">Edit User</h2>
+        <button id="closeEditDialog" class="close-btn">✕</button>
+      </div>
+      <form id="editForm">
+        <div class="form-group">
+          <label for="editUsername">Username</label>
+          <input id="editUsername" type="text" required />
+        </div>
+        <div class="form-group">
+          <label for="editPassword">New Password (leave empty to keep current)</label>
+          <input id="editPassword" type="password" placeholder="Enter new password or leave blank" />
+        </div>
+        <div class="dialog-actions">
+          <button id="cancelEditBtn" class="cancel-btn" type="button">Cancel</button>
+          <button class="save-btn" type="submit">Save Changes</button>
+        </div>
+      </form>
+      <div id="editMessage" class="message-box"></div>
+    </div>
+  </dialog>
+
+  <!-- Delete Confirmation Modal -->
+  <dialog id="deleteDialog">
+    <div class="dialog-content">
+      <div class="dialog-header">
+        <h2 class="dialog-title">Delete User</h2>
+        <button id="closeDeleteDialog" class="close-btn">✕</button>
+      </div>
+      <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
+      <p style="color: var(--secondary-text-color); font-size: 0.9rem;">This action cannot be undone. All notes for this user will be deleted.</p>
+      <div class="dialog-actions">
+        <button id="cancelDeleteBtn" class="cancel-btn">Cancel</button>
+        <button id="confirmDeleteBtn" class="delete-btn">Delete User</button>
+      </div>
+      <div id="deleteMessage" class="message-box"></div>
+    </div>
+  </dialog>
+</body>
+</html>
