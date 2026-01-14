@@ -28,9 +28,13 @@
 
 body {
   font-family: Poppins, sans-serif;
-  margin: 2rem;
+  margin: 0;
+  padding: 0;
   background: var(--base-color);
   color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
 
 h1 {
@@ -45,7 +49,20 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  padding: 2rem;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+header > h1 {
+  flex: 1;
+  text-align: center;
+}
+
+header > h1 {
+  flex: 1;
+  text-align: center;
 }
 
 .add-note-btn, .logout-btn, .loggin-btn, .register-btn {
@@ -81,11 +98,24 @@ header {
   color: white;
 }
 
+main:not(.auth-container):not(.admin-container) {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
 .notes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 2rem;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .note-card {
@@ -296,6 +326,7 @@ dialog::backdrop {
   margin: 0;
   padding: 2rem;
   background: var(--base-color);
+  width: 100%;
 }
 
 .auth-container h1 {
@@ -303,6 +334,8 @@ dialog::backdrop {
   margin-bottom: 2rem;
   text-align: center;
   color: var(--text-color);
+  width: 100%;
+  max-width: 500px;
 }
 
 .auth-container form {
@@ -345,6 +378,8 @@ dialog::backdrop {
   display: flex;
   gap: 1rem;
   margin-top: 2rem;
+  width: 100%;
+  justify-content: center;
 }
 
 .form-actions button {
@@ -375,6 +410,10 @@ dialog::backdrop {
 /* Auth Screen Styles */
 .auth-screen {
   width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .user-buttons-grid {
@@ -382,6 +421,10 @@ dialog::backdrop {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
   margin-bottom: 2rem;
+  width: 100%;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .user-btn {
@@ -464,8 +507,22 @@ dialog::backdrop {
 /* Admin Panel Styles */
 .admin-container {
   padding: 2rem;
+  width: 100%;
   max-width: 1000px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.users-section {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .users-section h2 {
@@ -479,6 +536,9 @@ dialog::backdrop {
   border-radius: 0.75rem;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 .users-table {
@@ -550,6 +610,8 @@ dialog::backdrop {
   display: flex;
   gap: 1rem;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .message-box {
