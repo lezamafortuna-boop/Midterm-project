@@ -1,10 +1,8 @@
 const express = require('express');
 const path = require('path');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const bcrypt = require('bcrypt');
+const { auth } = require('express-openid-connect');
 const mongoose = require('mongoose');
+require('dotenv').config();
 
 const { User, Note } = require('./models/models');
 const authRouter = require('./routers/authRouter');
@@ -14,54 +12,57 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/notetakingapp';
 
-// Connect to MongoDB with better logging
+// Connect to MongoDB
 mongoose.connect(MONGO_URI)
   .then(() => console.log('✓ MongoDB connected'))
   .catch(err => console.error('✗ MongoDB connection error:', err.message));
 
+// Body parser middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-app.use(session({
-  secret: 'replace-with-strong-secret',
-  resave: false,
-  saveUninitialized: false
+// Auth0 OpenID Connect middleware
+app.use(auth({
+  authRequired: false,
+  auth0Logout: true,
+  baseURL: process.env.BASE_URL || 'http://localhost:3000',
+  clientID: process.env.AUTH0_CLIENT_ID,
+  clientSecret: process.env.AUTH0_CLIENT_SECRET,
+  issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
+  secret: process.env.AUTH0_SECRET
 }));
 
-app.use(passport.initialize());
-app.use(passport.session());
+// Middleware to sync Auth0 users with MongoDB
+app.use(async (req, res, next) => {
+  if (req.oidc && req.oidc.isAuthenticated()) {
+    try {
+      const auth0Id = req.oidc.user.sub;
+      const email = req.oidc.user.email;
+      const name = req.oidc.user.name;
 
-passport.use(new LocalStrategy(async (username, password, done) => {
-  try {
-    const user = await User.findOne({ username });
-    if (!user) return done(null, false);
-    const match = await bcrypt.compare(password, user.passwordHash);
-    if (!match) return done(null, false);
-    return done(null, user);
-  } catch (err) {
-    return done(err);
+      // Upsert user in MongoDB
+      await User.findOneAndUpdate(
+        { auth0Id },
+        { auth0Id, email, name },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      console.error('Error syncing user:', err.message);
+    }
   }
-}));
-
-passport.serializeUser((user, done) => done(null, user._id));
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await User.findById(id);
-    done(null, user || false);
-  } catch (err) {
-    done(err);
-  }
+  next();
 });
 
 // Routers
 app.use('/auth', authRouter);
 app.use('/api', takingRouter);
 
-// redirect root to login if not authenticated, else show notes app or admin panel
+// Root route - redirect to login if not authenticated, else show app or admin panel
 app.get('/', (req, res) => {
-  if(req.isAuthenticated()) {
-    // Redirect admin to admin panel by default
-    if(req.user.username === 'lezama24') {
+  if (req.oidc.isAuthenticated()) {
+    // Check if admin (you can customize this logic based on your needs)
+    const isAdmin = req.oidc.user.email === process.env.ADMIN_EMAIL;
+    if (isAdmin) {
       res.sendFile(path.join(__dirname, 'public', 'admin.html'));
     } else {
       res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -73,14 +74,14 @@ app.get('/', (req, res) => {
 
 // Route for admin to access notes app
 app.get('/notes', (req, res) => {
-  if(req.isAuthenticated()) {
+  if (req.oidc.isAuthenticated()) {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   } else {
     res.redirect('/auth/login');
   }
 });
 
-// serve static assets (css/js for login allowed) - AFTER root route
+// Serve static assets
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✓ Server running on http://localhost:${PORT}`));

@@ -35,12 +35,14 @@ document.addEventListener('DOMContentLoaded', () => {
       usersTableBody.innerHTML = '';
       users.forEach(user => {
         const row = document.createElement('tr');
+        const adminEmail = localStorage.getItem('adminEmail') || ''; // Get admin email if available
+        const isAdmin = user.email === adminEmail;
         row.innerHTML = `
-          <td>${user.username}${user.username === 'lezama24' ? ' <strong style="color: var(--brand-color);">(Admin)</strong>' : ''}</td>
+          <td>${user.email}${isAdmin ? ' <strong style="color: var(--brand-color);">(Admin)</strong>' : ''}</td>
           <td class="actions-cell">
-            ${user.username !== 'lezama24' ? `
-              <button class="edit-user-btn" data-id="${user._id}" data-username="${user.username}">Edit</button>
-              <button class="delete-user-btn" data-id="${user._id}" data-username="${user.username}">Delete</button>
+            ${!isAdmin ? `
+              <button class="edit-user-btn" data-id="${user._id}" data-email="${user.email}" data-name="${user.name || ''}">Edit</button>
+              <button class="delete-user-btn" data-id="${user._id}" data-email="${user.email}">Delete</button>
             ` : '<span style="color: var(--secondary-text-color);">Admin</span>'}
           </td>
         `;
@@ -52,10 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
           currentEditingUser = {
             id: btn.dataset.id,
-            username: btn.dataset.username
+            email: btn.dataset.email,
+            name: btn.dataset.name
           };
-          document.getElementById('editUsername').value = btn.dataset.username;
-          document.getElementById('editPassword').value = '';
+          document.getElementById('editUsername').value = btn.dataset.name || btn.dataset.email;
           editMessage.textContent = '';
           editDialog.showModal();
           document.getElementById('editUsername').focus();
@@ -66,9 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.addEventListener('click', () => {
           currentDeletingUser = {
             id: btn.dataset.id,
-            username: btn.dataset.username
+            email: btn.dataset.email
           };
-          deleteUsername.textContent = btn.dataset.username;
+          deleteUsername.textContent = btn.dataset.email;
           deleteMessage.textContent = '';
           deleteDialog.showModal();
         });
@@ -90,16 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (!currentEditingUser) return;
 
-    const username = document.getElementById('editUsername').value;
-    const password = document.getElementById('editPassword').value;
+    const name = document.getElementById('editUsername').value;
 
     try {
       const response = await fetch(`/api/admin/users/${currentEditingUser.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: username,
-          password: password || undefined
+          name: name
         })
       });
 

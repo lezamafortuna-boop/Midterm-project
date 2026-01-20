@@ -5,7 +5,7 @@ const router = express.Router();
 
 // Middleware: Ensure authenticated
 function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
+  if (req.oidc.isAuthenticated()) {
     return next();
   }
   res.status(401).json({ error: 'Not authenticated' });
@@ -13,10 +13,16 @@ function ensureAuthenticated(req, res, next) {
 
 // Middleware: Ensure admin
 function ensureAdmin(req, res, next) {
-  if (req.isAuthenticated() && req.user.username === 'lezama24') {
+  if (req.oidc.isAuthenticated() && req.oidc.user.email === process.env.ADMIN_EMAIL) {
     return next();
   }
   res.status(403).json({ error: 'Admin access required' });
+}
+
+// Helper: Get user's Auth0 ID
+async function getUserAuth0Id(req) {
+  const user = await User.findOne({ auth0Id: req.oidc.user.sub });
+  return user ? user.auth0Id : req.oidc.user.sub;
 }
 
 // ========== NOTES CRUD OPERATIONS ==========
@@ -24,8 +30,9 @@ function ensureAdmin(req, res, next) {
 // Get all notes for authenticated user
 router.get('/notes', ensureAuthenticated, async (req, res) => {
   try {
-    console.log('GET /api/notes - User:', req.user?._id);
-    const notes = await Note.find({ userId: req.user._id.toString() }).sort({ createdAt: -1 });
+    const auth0Id = await getUserAuth0Id(req);
+    console.log('GET /api/notes - User:', auth0Id);
+    const notes = await Note.find({ userId: auth0Id }).sort({ createdAt: -1 });
     console.log('Found notes:', notes.length);
     res.json(notes);
   } catch (err) {
@@ -37,9 +44,10 @@ router.get('/notes', ensureAuthenticated, async (req, res) => {
 // Create a new note
 router.post('/notes', ensureAuthenticated, async (req, res) => {
   try {
-    console.log('POST /api/notes - User:', req.user?._id, 'Body:', req.body);
+    const auth0Id = await getUserAuth0Id(req);
+    console.log('POST /api/notes - User:', auth0Id, 'Body:', req.body);
     const { title, content } = req.body;
-    const note = new Note({ userId: req.user._id.toString(), title, content });
+    const note = new Note({ userId: auth0Id, title, content });
     const saved = await note.save();
     console.log('Note saved:', saved._id);
     res.json(saved);
@@ -52,10 +60,11 @@ router.post('/notes', ensureAuthenticated, async (req, res) => {
 // Update a note
 router.put('/notes/:id', ensureAuthenticated, async (req, res) => {
   try {
-    console.log('PUT /api/notes/:id - ID:', req.params.id, 'User:', req.user?._id);
+    const auth0Id = await getUserAuth0Id(req);
+    console.log('PUT /api/notes/:id - ID:', req.params.id, 'User:', auth0Id);
     const { title, content } = req.body;
     const note = await Note.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user._id.toString() },
+      { _id: req.params.id, userId: auth0Id },
       { title, content },
       { new: true }
     );
@@ -74,8 +83,9 @@ router.put('/notes/:id', ensureAuthenticated, async (req, res) => {
 // Delete a note
 router.delete('/notes/:id', ensureAuthenticated, async (req, res) => {
   try {
-    console.log('DELETE /api/notes/:id - ID:', req.params.id, 'User:', req.user?._id);
-    const note = await Note.findOneAndDelete({ _id: req.params.id, userId: req.user._id.toString() });
+    const auth0Id = await getUserAuth0Id(req);
+    console.log('DELETE /api/notes/:id - ID:', req.params.id, 'User:', auth0Id);
+    const note = await Note.findOneAndDelete({ _id: req.params.id, userId: auth0Id });
     if (!note) {
       console.log('Note not found for deletion');
       return res.status(404).json({ error: 'Note not found' });
@@ -93,7 +103,7 @@ router.delete('/notes/:id', ensureAuthenticated, async (req, res) => {
 // Get all users (admin only)
 router.get('/admin/users', ensureAdmin, async (req, res) => {
   try {
-    const users = await User.find({}, 'username _id').sort({ _id: 1 });
+    const users = await User.find({}, 'email name auth0Id createdAt').sort({ createdAt: -1 });
     res.json(users);
   } catch (err) {
     console.error('GET /api/admin/users error:', err.message);
@@ -104,35 +114,25 @@ router.get('/admin/users', ensureAdmin, async (req, res) => {
 // Update user (admin only)
 router.put('/admin/users/:id', ensureAdmin, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { name } = req.body;
     const userId = req.params.id;
 
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    if (user.username === 'lezama24') {
+    if (user.email === process.env.ADMIN_EMAIL) {
       return res.status(403).json({ error: 'Cannot modify admin account' });
     }
 
-    // Update username if provided and unique
-    if (username && username !== user.username) {
-      const existing = await User.findOne({ username });
-      if (existing) {
-        return res.status(400).json({ error: 'Username already taken' });
-      }
-      user.username = username;
+    // Update name if provided
+    if (name) {
+      user.name = name;
+      await user.save();
     }
 
-    // Update password if provided
-    if (password) {
-      const bcrypt = require('bcrypt');
-      user.passwordHash = await bcrypt.hash(password, 10);
-    }
-
-    await user.save();
-    console.log(`✓ User updated: ${user.username}`);
-    res.json({ success: true, user: { _id: user._id, username: user.username } });
+    console.log(`✓ User updated: ${user.email}`);
+    res.json({ success: true, user: { _id: user._id, email: user.email, name: user.name } });
   } catch (err) {
     console.error('PUT /api/admin/users error:', err.message);
     res.status(500).json({ error: 'Failed to update user' });
@@ -149,16 +149,16 @@ router.delete('/admin/users/:id', ensureAdmin, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    if (user.username === 'lezama24') {
+    if (user.email === process.env.ADMIN_EMAIL) {
       return res.status(403).json({ error: 'Cannot delete admin account' });
     }
 
     // Delete user and all their notes
     await User.findByIdAndDelete(userId);
-    await Note.deleteMany({ userId: userId.toString() });
+    await Note.deleteMany({ userId: user.auth0Id });
 
-    console.log(`✓ User deleted: ${user.username}`);
-    res.json({ success: true, message: `User ${user.username} deleted` });
+    console.log(`✓ User deleted: ${user.email}`);
+    res.json({ success: true, message: `User ${user.email} deleted` });
   } catch (err) {
     console.error('DELETE /api/admin/users error:', err.message);
     res.status(500).json({ error: 'Failed to delete user' });
