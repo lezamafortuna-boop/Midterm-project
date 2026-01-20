@@ -1,6 +1,6 @@
 # Quick Notes — Note Taking Application
 
-A secure, multi-user note-taking application built with **Express.js**, **MongoDB**, and **Passport.js**. The app features role-based access control with an admin panel for user management, responsive design, and a clean, modern interface.
+A secure, multi-user note-taking application built with **Express.js**, **MongoDB**, and **Auth0**. The app features seamless OAuth authentication, responsive design, and a clean, modern interface.
 
 ## 📋 Table of Contents
 
@@ -10,7 +10,6 @@ A secure, multi-user note-taking application built with **Express.js**, **MongoD
 - [How to Run](#how-to-run)
 - [User Roles & Authentication](#user-roles--authentication)
 - [Application Usage](#application-usage)
-- [Admin Panel](#admin-panel)
 - [Project Structure](#project-structure)
 - [API Endpoints](#api-endpoints)
 - [Technologies Used](#technologies-used)
@@ -20,21 +19,12 @@ A secure, multi-user note-taking application built with **Express.js**, **MongoD
 ## ✨ Features
 
 ### Core Features
-- **User Authentication** - Secure login with Passport.js and bcrypt password hashing
-- **User Selection** - Simple interface to select user before entering password
+- **Auth0 Authentication** - Secure OAuth login with Auth0
+- **User Authentication** - Automatic user sync with MongoDB
 - **Note Management** - Create, read, update, and delete notes
-- **User Limit** - Maximum of 4 registered users (configurable)
 - **Responsive Design** - Works seamlessly on desktop and mobile devices
 - **Dark/Light Theme** - Toggle between dark and light color schemes
 - **Real-time Updates** - Notes update instantly in the grid
-
-### Admin Features
-- **User Management** - View, edit, and delete user accounts
-- **Password Reset** - Change user passwords from admin panel
-- **User Username Edit** - Rename user accounts
-- **Notes Management** - Admin can delete users along with their notes
-- **Admin Protection** - Admin account cannot be edited or deleted
-- **Admin Dashboard** - Dedicated admin panel for management tasks
 
 ---
 
@@ -44,6 +34,7 @@ A secure, multi-user note-taking application built with **Express.js**, **MongoD
 - **MongoDB** - Local or remote MongoDB instance
 - **npm** - Node Package Manager
 - **Modern Web Browser** - Chrome, Firefox, Safari, or Edge
+- **Auth0 Account** - For OAuth setup
 
 ---
 
@@ -66,17 +57,43 @@ npm install
   ```
 - **Remote MongoDB**: Ensure you have internet connectivity and valid connection string
 
-### 4. Environment Variables (Optional)
+### 4. Configure Auth0
+
+1. Create an [Auth0 account](https://auth0.com)
+2. Create a new Application (Regular Web Application)
+3. Go to Application Settings and note:
+   - **Client ID**
+   - **Client Secret**
+   - **Domain**
+
+4. Set Allowed Callback URLs:
+   ```
+   http://localhost:3000/callback
+   ```
+
+5. Set Allowed Logout URLs:
+   ```
+   http://localhost:3000
+   ```
+
+### 5. Environment Variables
+
 Create a `.env` file in the root directory:
 ```env
 PORT=3000
 MONGO_URI=mongodb://localhost:27017/notetakingapp
+BASE_URL=http://localhost:3000
+AUTH0_CLIENT_ID=your_client_id_here
+AUTH0_CLIENT_SECRET=your_client_secret_here
+AUTH0_ISSUER_BASE_URL=https://your-domain.auth0.com
+AUTH0_SECRET=your_generated_secret_here
+ADMIN_EMAIL=your-email@example.com
 ```
 
-### 5. Initialize Admin User
-The admin user is automatically created on first server startup:
-- **Username**: `lezama24`
-- **Password**: `Lezama2402!`
+**Note**: To generate `AUTH0_SECRET`, you can use:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
 ---
 
@@ -90,9 +107,7 @@ node server.js
 Expected output:
 ```
 ✓ MongoDB connected
-✓ Admin user already exists
-✓ Total registered users: 2
-Server running on http://localhost:3000
+✓ Server running on http://localhost:3000
 ```
 
 ### Access the Application
@@ -101,38 +116,25 @@ Open your browser and navigate to:
 http://localhost:3000
 ```
 
-You will be redirected to the login page if not authenticated.
+You will be redirected to the Auth0 login page if not authenticated.
 
 ---
 
 ## 👥 User Roles & Authentication
 
-### User Roles
+### Authentication Flow
 
-#### 1. **Regular User**
-- Can **create** personal notes
-- Can **edit** their own notes
-- Can **delete** their own notes
-- Can **view** only their own notes
-- Cannot access admin panel
-- Cannot view or manage other users
+1. **User visits app** → Redirected to Auth0 login (if not authenticated)
+2. **Auth0 login/signup** → User authenticates via Auth0
+3. **User synced to MongoDB** → User profile automatically saved in database
+4. **Access app** → User can create and manage notes
 
-#### 2. **Admin User**
-- Has all regular user privileges
-- **Admin Username**: `lezama24`
-- **Admin Password**: `Lezama2402!`
-- Can access **Admin Panel**
-- Can view all registered users
-- Can **edit** user information (username & password)
-- Can **delete** users (including all their notes)
-- **Cannot be deleted or modified** (admin account is protected)
-- Automatically redirected to Admin Panel on login
-
-### User Limit
-- **Maximum Users**: 4 total
-- **Current Available Slots**: Depends on number of registered users
-- When limit is reached, new user registration is **blocked**
-- Message: "Maximum 4 users allowed. Cannot register more users."
+### User Profile
+Each user has:
+- **Auth0 ID** - Unique identifier from Auth0
+- **Email** - From Auth0 profile
+- **Name** - From Auth0 profile
+- **Created At** - Timestamp of first login
 
 ---
 
@@ -140,39 +142,17 @@ You will be redirected to the login page if not authenticated.
 
 ### 1. Login Process
 
-#### First Screen - User Selection
-- App displays all registered users as clickable buttons
-- Select your username from the list
-- If you're a new user, click **"Register New User"** button
-
-#### Second Screen - Password Entry
-- Enter your password
+#### First Visit
 - Click **"Login"** button
-- If admin user logs in → **Redirected to Admin Panel**
-- If regular user logs in → **Redirected to Notes App**
+- Redirected to Auth0 login page
+- Enter email and password (or social login)
+- Authenticated and redirected to Notes App
 
-#### Error Handling
-- **Invalid Password**: "Invalid password." message displayed
-- **User Not Found**: "Login failed." message
-- **Server Error**: "An error occurred." message
+#### Subsequent Visits
+- If already logged in, directly access the app
+- Click **"Logout"** to sign out
 
-### 2. Registration Process
-
-#### Register New User (if slots available)
-1. On login screen, click **"Register New User"**
-2. Enter desired **username**
-3. Enter desired **password**
-4. Click **"Register"**
-5. Success message displays
-6. Automatically redirected to login screen
-7. Select new username and login
-
-#### Registration Errors
-- **Username Already Exists**: "Username already exists."
-- **User Limit Reached**: "Maximum 4 users allowed. Cannot register more users."
-- **Missing Fields**: "Missing username or password"
-
-### 3. Notes App (Regular User)
+### 2. Notes App
 
 #### Create a Note
 1. Click **"Add Note"** button (top-left)
@@ -193,102 +173,42 @@ You will be redirected to the login page if not authenticated.
 #### Delete a Note
 1. Hover over a note card
 2. Click **"Delete"** icon (trash)
-3. Note is removed immediately
+3. Confirm deletion
+4. Note is removed immediately
 
 #### Logout
 - Click **"Logout"** button (top-right)
-- Redirected to login page
-
-### 4. Admin Dashboard
-
-#### Access Admin Panel
-- Login as **lezama24**
-- Automatically redirected to Admin Panel
-- Or click **"Go to Notes App"** to access notes features
-
-#### View Users
-- Admin panel displays all registered users in a table
-- Shows username and action buttons
-- Admin account labeled as **(Admin)** - protected from editing/deletion
-
-#### Edit User
-1. Click **"Edit"** button next to user
-2. Dialog opens with username and password fields
-3. **Change Username** (optional) - must be unique
-4. **Change Password** (optional) - leave blank to keep current
-5. Click **"Save Changes"**
-6. User table refreshes automatically
-
-#### Delete User
-1. Click **"Delete"** button next to user
-2. Confirmation dialog appears
-3. Warning: "This action cannot be undone. All notes for this user will be deleted."
-4. Click **"Delete User"** to confirm
-5. User and all their notes are permanently removed
-6. User table refreshes automatically
-
-#### Refresh User List
-- Click **"Refresh Users"** button to reload the user list
-- Useful after making changes in another window
-
-#### Additional Features
-- **Go to Notes App**: Switch to regular note-taking features
-- **Logout**: Return to login page
+- Redirected to Auth0 logout (and then to login page)
 
 ---
 
-## 🔐 Admin Panel
-
-### Admin Account Protection
-- Admin account (`lezama24`) **cannot be edited** or **deleted**
-- Attempting to modify admin shows error: "Cannot modify admin account"
-- Attempting to delete admin shows error: "Cannot delete admin account"
-
-### Admin Actions Log
-All admin actions are logged to console:
-- ✓ User updated
-- ✓ User deleted
-- ✓ Admin user already exists
-- ✓ New user registered
-
-### User Management Table
-| Username | Actions |
-|----------|---------|
-| User1 | Edit, Delete |
-| User2 | Edit, Delete |
-| lezama24 | (Admin) |
-
----
-
-## 📁 Project Structure
+## � Project Structure
 
 ```
 noteTakingApp/
 │
-├── server.js                 # Main Express server (routes & setup only)
+├── server.js                 # Main Express server with Auth0 setup
 ├── package.json             # Dependencies
 ├── README.md               # This file
-├── seedAdmin.js            # (Can be deleted - functionality in authRouter)
+├── .env                    # Environment variables (create yourself)
 │
 ├── models/
 │   └── models.js           # MongoDB schemas (User & Note)
 │
 ├── routers/
-│   ├── authRouter.js       # Authentication (login, register, admin init)
-│   └── takingRouter.js     # CRUD operations (notes & admin endpoints)
+│   ├── authRouter.js       # Authentication routes
+│   └── takingRouter.js     # CRUD operations (notes)
 │
 └── public/
     ├── index.html          # Notes app interface
-    ├── loggin.html         # Login & registration interface
-    ├── admin.html          # Admin panel interface
+    ├── loggin.html         # Login interface
     │
     ├── css/
     │   └── styles.css      # All application styles
     │
     └── js/
         ├── takingApp.js    # Notes app logic
-        ├── loggin.js       # Login & auth logic
-        └── admin.js        # Admin panel logic
+        └── loggin.js       # Login interface logic
 ```
 
 ---
@@ -297,39 +217,29 @@ noteTakingApp/
 
 ### Authentication Routes (`/auth`)
 
-#### User Selection
+#### Login
 ```
-GET /auth/users
-```
-Returns all registered usernames for login screen selection.
-
-#### User Login
-```
-POST /auth/login
-Body: { username, password }
-Success: Redirects to / (redirects to admin or notes based on user)
-Failure: Redirects to /auth/login?loginError=1
+GET /auth/login
+Redirects to Auth0 login page
 ```
 
-#### User Registration
-```
-POST /auth/register
-Body: { username, password }
-Response: { success: true, message: "User registered successfully" }
-Error: { error: "Error message" }
-```
-
-#### User Logout
+#### Logout
 ```
 GET /auth/logout
-Response: Redirects to /auth/login
+Logs out user and redirects to home
 ```
 
-#### Admin User Management
+#### Get Current User Profile
 ```
-GET /auth/admin/users
-PUT /auth/admin/users/:id
-DELETE /auth/admin/users/:id
+GET /auth/profile
+Response: { sub, email, name, ... }
+Requires: Authentication
+```
+
+#### Get All Users (for dropdown)
+```
+GET /api/users
+Response: [ { email, name }, ... ]
 ```
 
 ### Notes API Routes (`/api`)
@@ -338,6 +248,7 @@ DELETE /auth/admin/users/:id
 ```
 GET /api/notes
 Response: [ { _id, userId, title, content, createdAt }, ... ]
+Requires: Authentication
 ```
 
 #### Create Note
@@ -345,6 +256,7 @@ Response: [ { _id, userId, title, content, createdAt }, ... ]
 POST /api/notes
 Body: { title, content }
 Response: { _id, userId, title, content, createdAt }
+Requires: Authentication
 ```
 
 #### Update Note
@@ -352,36 +264,14 @@ Response: { _id, userId, title, content, createdAt }
 PUT /api/notes/:id
 Body: { title, content }
 Response: { _id, userId, title, content, createdAt }
+Requires: Authentication & Ownership
 ```
 
 #### Delete Note
 ```
 DELETE /api/notes/:id
 Response: { success: true }
-```
-
-### Admin API Routes (`/api/admin`)
-
-#### Get All Users (Admin Only)
-```
-GET /api/admin/users
-Response: [ { _id, username }, ... ]
-Requires: Admin authentication (lezama24)
-```
-
-#### Update User (Admin Only)
-```
-PUT /api/admin/users/:id
-Body: { username?, password? }
-Response: { success: true, user: { _id, username } }
-Requires: Admin authentication
-```
-
-#### Delete User (Admin Only)
-```
-DELETE /api/admin/users/:id
-Response: { success: true, message: "User deleted" }
-Requires: Admin authentication
+Requires: Authentication & Ownership
 ```
 
 ---
@@ -391,17 +281,18 @@ Requires: Admin authentication
 ### Backend
 - **Node.js** - JavaScript runtime
 - **Express.js** - Web application framework
+- **express-openid-connect** - Auth0 integration
 - **MongoDB** - NoSQL database
 - **Mongoose** - ODM for MongoDB
-- **Passport.js** - Authentication middleware
-- **bcrypt** - Password hashing
-- **express-session** - Session management
 
 ### Frontend
 - **HTML5** - Structure
 - **CSS3** - Styling (Flexbox, Grid, Variables)
 - **Vanilla JavaScript** - DOM manipulation & API calls
 - **Google Fonts** - Poppins font family
+
+### Authentication
+- **Auth0** - OAuth 2.0 and OpenID Connect provider
 
 ### Development
 - **npm** - Package manager
@@ -421,13 +312,13 @@ Requires: Admin authentication
 - Brand Color: #b98bff (Purple)
 - Base Color: #f2f4f8 (Light Gray)
 - Surface: #fff (White)
-- Text: #191b23 (Dark)
+- Text: #1b6e3e (Dark)
 
 **Dark Theme**
 - Brand Color: #8b90ff (Light Purple)
 - Base Color: #1e1f26 (Dark)
 - Surface: #2c2f38 (Dark Gray)
-- Text: #f0f0f0 (Light)
+- Text: #4ade80 (Green)
 
 ### Interactive Elements
 - Hover effects on buttons and cards
@@ -443,19 +334,19 @@ Requires: Admin authentication
 ```
 ✗ MongoDB connection error
 ```
-**Solution**: Ensure MongoDB is running locally or update MONGO_URI to valid connection string.
+**Solution**: Ensure MongoDB is running locally or update MONGO_URI in .env to valid connection string.
+
+### Auth0 Configuration Error
+```
+Invalid Client ID or Client Secret
+```
+**Solution**: Verify your Auth0 credentials in .env file and ensure callback URLs are configured.
 
 ### Port Already in Use
 ```
 Error: listen EADDRINUSE: address already in use :::3000
 ```
 **Solution**: Change PORT in .env or kill process using port 3000.
-
-### Admin User Not Created
-```
-✗ Error initializing admin
-```
-**Solution**: Check MongoDB connection and ensure write permissions.
 
 ### CSS Not Loading
 **Solution**: Clear browser cache (Ctrl+Shift+Delete) and refresh page.
@@ -469,44 +360,40 @@ Error: listen EADDRINUSE: address already in use :::3000
 
 ### Setup & First Login
 1. Start MongoDB: `mongod`
-2. Start server: `node server.js`
-3. Open browser: http://localhost:3000
-4. Select user: **lezama24**
-5. Enter password: **Lezama2402!**
-6. Redirected to Admin Panel
+2. Configure Auth0 (see Installation & Setup)
+3. Create .env file with Auth0 credentials
+4. Start server: `node server.js`
+5. Open browser: http://localhost:3000
+6. Click Login → Auth0 page → Sign up or login
+7. Redirected to Notes App
+8. Start creating notes!
 
-### Create Regular User
-1. On login screen, click **"Register New User"**
-2. Username: `john_doe`
-3. Password: `SecurePass123`
-4. Register and login
-5. Redirected to Notes App
-6. Start creating notes!
-
-### Admin Management
-1. Login as admin (lezama24)
-2. View users in admin panel
-3. Click Edit to change user password
-4. Click Delete to remove user (and their notes)
-5. Click "Go to Notes App" to create/manage your own notes
+### Create and Manage Notes
+1. Click **"Add Note"** button
+2. Enter title: "My First Note"
+3. Enter content: "This is great!"
+4. Click **"Save"**
+5. Note appears in grid
+6. Hover to edit or delete
+7. Click **"Logout"** when done
 
 ---
 
 ## 📧 Support
 
 For issues or questions about the application, please refer to the code comments in:
+- `server.js` - Main server setup and Auth0 configuration
 - `routers/authRouter.js` - Authentication logic
 - `routers/takingRouter.js` - CRUD operations
-- `public/js/loggin.js` - Login interface
-- `public/js/admin.js` - Admin panel logic
+- `public/js/takingApp.js` - Notes app logic
 
 ---
 
 ## 📄 License
 
-This is a midterm project for educational purposes.
+This is an educational project.
 
 ---
 
-**Last Updated**: January 13, 2026  
-**Version**: 1.0.0
+**Last Updated**: January 19, 2026  
+**Version**: 2.0.0

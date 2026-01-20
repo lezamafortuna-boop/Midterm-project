@@ -21,7 +21,7 @@
   --base-color: #1e1f26;
   --surface-color: #2c2f38;
   --text-color: #4ade80;
-  --secondary-text-color: #86efac;
+  --secondary-text-color: #d9ece0;
   --base-transparent-90: rgba(30, 31, 38, 0.9);
   --base-transparent-100: rgba(30, 31, 38, 1);
 }
@@ -104,14 +104,11 @@ main:not(.auth-container):not(.admin-container) {
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
 }
 
 .notes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
   width: 100%;
   max-width: 1200px;
@@ -574,6 +571,7 @@ dialog::backdrop {
 .actions-cell {
   display: flex;
   gap: 0.5rem;
+  overflow: visible;
 }
 
 .edit-user-btn, .delete-user-btn {
@@ -584,6 +582,8 @@ dialog::backdrop {
   font-weight: 500;
   transition: all 0.2s ease;
   font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: visible;
 }
 
 .edit-user-btn {

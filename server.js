@@ -29,8 +29,19 @@ app.use(auth({
   clientID: process.env.AUTH0_CLIENT_ID,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
-  secret: process.env.AUTH0_SECRET
+  secret: process.env.AUTH0_SECRET,
+  routes: {
+    login: false
+  }
 }));
+
+// Middleware to check authentication
+const requireAuth = (req, res, next) => {
+  if (!req.oidc || !req.oidc.isAuthenticated()) {
+    return res.redirect('/auth/login');
+  }
+  next();
+};
 
 // Middleware to sync Auth0 users with MongoDB
 app.use(async (req, res, next) => {
@@ -57,29 +68,13 @@ app.use(async (req, res, next) => {
 app.use('/auth', authRouter);
 app.use('/api', takingRouter);
 
-// Root route - redirect to login if not authenticated, else show app or admin panel
-app.get('/', (req, res) => {
-  if (req.oidc.isAuthenticated()) {
-    // Check if admin (you can customize this logic based on your needs)
-    const isAdmin = req.oidc.user.email === process.env.ADMIN_EMAIL;
-    if (isAdmin) {
-      res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-    } else {
-      res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    }
-  } else {
-    res.redirect('/auth/login');
-  }
+// Root route - redirect to login if not authenticated, else show app
+app.get('/', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Route for admin to access notes app
-app.get('/notes', (req, res) => {
-  if (req.oidc.isAuthenticated()) {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-  } else {
-    res.redirect('/auth/login');
-  }
-});
+// Protect API routes
+app.use('/api', requireAuth);
 
 // Serve static assets
 app.use(express.static(path.join(__dirname, 'public')));
