@@ -7,23 +7,25 @@
 }
 
 :root {
-  --brand-color: #b98bff;
-  --base-color: #f2f4f8;
-  --surface-color: #fff;
-  --text-color: #1b6e3e;
-  --secondary-text-color: #2d8659;
-  --base-transparent-90: rgba(247, 247, 247, 0.9);
-  --base-transparent-100: rgba(247, 247, 247, 1);
+  --brand-color: #7C4DFF;              /* Vibrant lavender */
+  --base-color: #F4F2FF;               /* Soft lavender-tinted background */
+  --surface-color: #FFFFFF;            /* Clean card surfaces */
+  --text-color: #2A1F4A;               /* Deep purple text */
+  --secondary-text-color: #5A4E7A;     /* Muted lavender-gray */
+
+  --base-transparent-90: rgba(244, 242, 255, 0.9);
+  --base-transparent-100: rgba(244, 242, 255, 1);
 }
 
 .dark-theme {
-  --brand-color: #8b90ff;
-  --base-color: #1e1f26;
-  --surface-color: #2c2f38;
-  --text-color: #4ade80;
-  --secondary-text-color: #d9ece0;
-  --base-transparent-90: rgba(30, 31, 38, 0.9);
-  --base-transparent-100: rgba(30, 31, 38, 1);
+  --brand-color: #C5B3FF;              /* Brighter lavender accent */
+  --base-color: #0F0D16;               /* Deep neutral purple charcoal */
+  --surface-color: #1A1624;            /* Clean slate‑purple card surface */
+  --text-color: #F2ECFF;               /* Soft lavender‑white */
+  --secondary-text-color: #B9AEE6;     /* Muted lavender-gray */
+
+  --base-transparent-90: rgba(15, 13, 22, 0.9);
+  --base-transparent-100: rgba(15, 13, 22, 1);
 }
 
 body {
@@ -63,6 +65,27 @@ header > h1 {
 header > h1 {
   flex: 1;
   text-align: center;
+}
+
+.color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s ease, border 0.15s ease;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+  border: 2px solid #333;
 }
 
 .add-note-btn, .logout-btn, .loggin-btn, .register-btn {
@@ -113,7 +136,6 @@ main:not(.auth-container):not(.admin-container) {
   max-width: 1200px;
   margin: 0 auto;
 }
-
 
 .note-card {
   background: var(--surface-color);
