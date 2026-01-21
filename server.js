@@ -64,6 +64,9 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Protect API routes
+app.use('/api', requireAuth);
+
 // Routers
 app.use('/auth', authRouter);
 app.use('/api', takingRouter);
@@ -72,9 +75,6 @@ app.use('/api', takingRouter);
 app.get('/', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
-// Protect API routes
-app.use('/api', requireAuth);
 
 // Serve static assets
 app.use(express.static(path.join(__dirname, 'public')));

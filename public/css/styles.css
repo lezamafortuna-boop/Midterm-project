@@ -107,13 +107,13 @@ main:not(.auth-container):not(.admin-container) {
 }
 
 .notes-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
+  column-count: 3;
+  column-gap: 2rem;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
 }
+
 
 .note-card {
   background: var(--surface-color);
@@ -122,6 +122,8 @@ main:not(.auth-container):not(.admin-container) {
   border: 1px solid var(--surface-color);
   transition: all 0.2s ease;
   position: relative;
+  break-inside: avoid;
+  margin-bottom: 2rem;
 }
 
 .note-card:hover {
