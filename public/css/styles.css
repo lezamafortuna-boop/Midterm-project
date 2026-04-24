@@ -195,21 +195,26 @@ main:not(.auth-container):not(.admin-container) {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
-  background: var(--base-transparent-90);
-  color: var(--text-color);
-  border: 1px solid var(--surface-color);
+}
+
+.edit-btn {
+  background: var(--brand-color);
+  color: white;
 }
 
 .edit-btn:hover {
-  background: var(--base-transparent-100);
+  background: #7a7fff;
   transform: scale(1.05);
 }
 
-.delete-btn:hover {
+.delete-btn {
   background: #ff5252;
-  transform: scale(1.05);
   color: white;
+}
+
+.delete-btn:hover {
+  background: #ff1744;
+  transform: scale(1.05);
 }
 
 dialog {
